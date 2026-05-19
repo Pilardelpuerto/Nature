@@ -259,6 +259,10 @@
     }
 
     function colgar() {
+      // Sonido de colgar inmediato — lo primero
+      colgarAudio.currentTime = 0;
+      colgarAudio.play().catch(() => {});
+
       if (endedHandler) {
         audio.removeEventListener('ended', endedHandler);
         endedHandler = null;
@@ -267,9 +271,6 @@
       audio.src = '';
       clearInterval(timerInterval);
       estado = 'idle';
-
-      colgarAudio.currentTime = 0;
-      colgarAudio.play().catch(() => {});
 
       dialTone.classList.remove('colgando');
       connecting.style.visibility = 'hidden';
