@@ -205,7 +205,7 @@
     const AUDIO_NOCHE = "https://archive.org/download/night_202605/night.mp3";
     const DURACION_TOTAL = 5872;
     const DURACION_NOCHE = 10800;
-    const ORIGEN = new Date('2025-01-01T00:00:00Z').getTime();
+    const ORIGEN = new Date("2025-01-01T00:00:00Z").getTime();
 
     function esNoche() {
       const hora = new Date().getHours();
@@ -215,36 +215,36 @@
     const AUDIO_URL = esNoche() ? AUDIO_NOCHE : AUDIO_DIA;
     const DURACION = esNoche() ? DURACION_NOCHE : DURACION_TOTAL;
 
-    const connecting = document.getElementById('connecting');
-    const hint = document.getElementById('tap-hint');
-    const timer = document.getElementById('timer');
-    const dialTone = document.getElementById('dial-tone');
-    const tonoAudio = document.getElementById('tono-audio');
-    const colgarAudio = document.getElementById('colgar-audio');
+    const connecting = document.getElementById("connecting");
+    const hint = document.getElementById("tap-hint");
+    const timer = document.getElementById("timer");
+    const dialTone = document.getElementById("dial-tone");
+    const tonoAudio = document.getElementById("tono-audio");
+    const colgarAudio = document.getElementById("colgar-audio");
 
     const audio = new Audio();
-    audio.preload = 'none';
+    audio.preload = "none";
 
-    let estado = 'idle'; // idle | tonando | conectando | conectado
+    let estado = "idle";
     let timerInterval = null;
     let segundos = 0;
     let endedHandler = null;
-    let lastTouch = 0;
+    let ultimoEvento = 0;
 
     function getPuntoActual() {
       return (Date.now() - ORIGEN) / 1000 % DURACION;
     }
 
     function formatTime(s) {
-      const m = Math.floor(s / 60).toString().padStart(2, '0');
-      const sec = (s % 60).toString().padStart(2, '0');
-      return `${m}:${sec}`;
+      const m = Math.floor(s / 60).toString().padStart(2, "0");
+      const sec = (s % 60).toString().padStart(2, "0");
+      return m + ":" + sec;
     }
 
     function iniciarTimer() {
       segundos = 0;
-      timer.style.visibility = 'visible';
-      timer.textContent = '00:00';
+      timer.style.visibility = "visible";
+      timer.textContent = "00:00";
       timerInterval = setInterval(() => {
         segundos++;
         timer.textContent = formatTime(segundos);
@@ -252,36 +252,36 @@
     }
 
     function mostrarConectado() {
-      estado = 'conectado';
-      connecting.innerHTML = 'connected';
-      dialTone.classList.add('colgando');
+      estado = "conectado";
+      connecting.innerHTML = "connected";
+      dialTone.classList.add("colgando");
       iniciarTimer();
     }
 
     function colgar() {
-      // Sonido de colgar inmediato — lo primero
+      if (estado !== "conectado") return;
+
       colgarAudio.currentTime = 0;
       colgarAudio.play().catch(() => {});
 
       if (endedHandler) {
-        audio.removeEventListener('ended', endedHandler);
+        audio.removeEventListener("ended", endedHandler);
         endedHandler = null;
       }
       audio.pause();
-      audio.src = '';
+      audio.src = "";
       clearInterval(timerInterval);
-      estado = 'idle';
+      estado = "idle";
 
-      dialTone.classList.remove('colgando');
-      connecting.style.visibility = 'hidden';
-      timer.style.visibility = 'hidden';
-      hint.style.visibility = 'visible';
-      connecting.innerHTML = 'connecting<span class="dots"><span>.</span><span>.</span><span>.</span></span>';
+      dialTone.classList.remove("colgando");
+      connecting.style.visibility = "hidden";
+      timer.style.visibility = "hidden";
+      hint.style.visibility = "visible";
+      connecting.innerHTML = "connecting<span class='dots'><span>.</span><span>.</span><span>.</span></span>";
     }
 
     function conectarAudio() {
-      // Si ya no estamos en estado conectando (ej. usuario colgó durante los tonos), abortar
-      if (estado !== 'conectando') return;
+      if (estado !== "conectando") return;
 
       endedHandler = () => {
         audio.currentTime = getPuntoActual();
@@ -289,92 +289,93 @@
       };
 
       const intentarPlay = () => {
+        if (estado !== "conectando") return;
         audio.currentTime = getPuntoActual();
         audio.play().then(() => {
           mostrarConectado();
-          audio.addEventListener('ended', endedHandler);
+          audio.addEventListener("ended", endedHandler);
         }).catch(() => {
-          // Si falla el play, volver a idle
-          estado = 'idle';
-          connecting.style.visibility = 'hidden';
-          hint.style.visibility = 'visible';
+          estado = "idle";
+          connecting.style.visibility = "hidden";
+          hint.style.visibility = "visible";
         });
       };
 
       if (audio.readyState >= 3) {
         intentarPlay();
       } else {
-        audio.addEventListener('canplay', intentarPlay, { once: true });
-        audio.addEventListener('error', () => {
-          estado = 'idle';
-          connecting.style.visibility = 'hidden';
-          hint.style.visibility = 'visible';
+        audio.addEventListener("canplay", intentarPlay, { once: true });
+        audio.addEventListener("error", () => {
+          if (estado === "conectando") {
+            estado = "idle";
+            connecting.style.visibility = "hidden";
+            hint.style.visibility = "visible";
+          }
         }, { once: true });
       }
     }
 
     function reproducirTonos(veces, callback) {
       let count = 0;
-
       function reproducirUno() {
+        if (estado !== "tonando") return;
         tonoAudio.currentTime = 0;
         tonoAudio.play().catch(() => {});
         count++;
         if (count < veces) {
           setTimeout(reproducirUno, 3000);
         } else {
-          tonoAudio.addEventListener('ended', () => {
-            setTimeout(callback, 100);
+          tonoAudio.addEventListener("ended", () => {
+            if (estado === "tonando") callback();
           }, { once: true });
         }
       }
-
       reproducirUno();
     }
 
     function empezar() {
-      if (estado !== 'idle') return;
-      estado = 'tonando';
+      if (estado !== "idle") return;
+      estado = "tonando";
 
-      // Desbloquear audio de colgar sin que suene
-      colgarAudio.load();
+      hint.style.visibility = "hidden";
+      connecting.style.visibility = "visible";
 
-      hint.style.visibility = 'hidden';
-      connecting.style.visibility = 'visible';
-
-      // Precargar audio en paralelo con los tonos
       audio.src = AUDIO_URL;
       audio.load();
+      tonoAudio.load();
 
       const numTonos = Math.floor(Math.random() * 3) + 1;
 
       setTimeout(() => {
-        tonoAudio.load();
         reproducirTonos(numTonos, () => {
-          estado = 'conectando';
+          estado = "conectando";
           conectarAudio();
         });
       }, 500);
     }
 
-    hint.style.visibility = 'visible';
+    hint.style.visibility = "visible";
 
     function manejarInteraccion(e) {
-      if (e.type === 'touchend') lastTouch = Date.now();
-      if (e.type === 'click' && Date.now() - lastTouch < 500) return;
+      const ahora = Date.now();
+      if (e.type === "click" && ahora - ultimoEvento < 600) return;
+      if (e.type === "touchend") ultimoEvento = ahora;
 
-      if (e.target.closest('#dial-tone') && estado === 'conectado') {
+      const enDialTone = e.target.closest("#dial-tone");
+
+      if (enDialTone && estado === "conectado") {
+        e.preventDefault();
         colgar();
         return;
       }
 
-      if (estado === 'idle') {
+      if (estado === "idle") {
         empezar();
       }
     }
 
-    document.body.addEventListener('click', manejarInteraccion);
-    document.body.addEventListener('touchend', manejarInteraccion);
+    document.body.addEventListener("click", manejarInteraccion);
+    document.body.addEventListener("touchend", manejarInteraccion);
   </script>
 
 </body>
