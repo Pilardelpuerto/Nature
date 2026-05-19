@@ -256,6 +256,18 @@
       connecting.innerHTML = "connected";
       dialTone.classList.add("colgando");
       iniciarTimer();
+
+      // Keepalive: cada 10s verifica que el audio sigue sonando
+      const keepAlive = setInterval(() => {
+        if (estado !== "conectado") {
+          clearInterval(keepAlive);
+          return;
+        }
+        if (audio.paused) {
+          audio.currentTime = getPuntoActual();
+          audio.play().catch(() => {});
+        }
+      }, 10000);
     }
 
     function colgar() {
