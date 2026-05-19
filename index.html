@@ -336,6 +336,9 @@
       if (estado !== 'idle') return;
       estado = 'tonando';
 
+      // Desbloquear audios en el contexto del evento de usuario
+      colgarAudio.play().then(() => colgarAudio.pause()).catch(() => {});
+
       hint.style.visibility = 'hidden';
       connecting.style.visibility = 'visible';
 
